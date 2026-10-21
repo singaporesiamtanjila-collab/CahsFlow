@@ -1,0 +1,6 @@
+{
+  "name": "CNC Craft",
+  "description": "Offline CNC design daily work, income, revenue, and profit tracker with biometric authentication and data backup.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
