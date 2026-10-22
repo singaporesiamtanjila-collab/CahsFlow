@@ -27,12 +27,17 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.DoorFront
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Engineering
+import androidx.compose.material.icons.filled.GridOn
+import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.MonetizationOn
+import androidx.compose.material.icons.filled.PrecisionManufacturing
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.AlertDialog
@@ -66,6 +71,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.CncDesignEntity
@@ -86,6 +92,7 @@ import com.example.ui.theme.CncSurfaceVariant
 import com.example.ui.theme.CncTextPrimary
 import com.example.ui.theme.CncTextSecondary
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -107,7 +114,6 @@ fun DailyWorkScreen(
 
     val categories = listOf("All", "Door", "Jali / Grill", "3D Relief", "Wall Panel", "Engraving", "Furniture")
 
-    // Calculations for the current day
     val totalRevenue = dailyDesigns.sumOf { it.sellingPrice }
     val totalCost = dailyDesigns.sumOf { it.productionCost }
     val netProfit = totalRevenue - totalCost
@@ -120,12 +126,35 @@ fun DailyWorkScreen(
     val displayDateFormatted = remember(selectedDate) {
         try {
             val parser = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-            val formatter = SimpleDateFormat("EEE, dd MMM yyyy", Locale.getDefault())
+            val formatter = SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.getDefault())
             val parsed = parser.parse(selectedDate)
             if (parsed != null) formatter.format(parsed) else selectedDate
         } catch (_: Exception) {
             selectedDate
         }
+    }
+
+    // Generate 7 carousel days centered around selectedDate
+    val carouselDays = remember(selectedDate) {
+        val list = mutableListOf<Pair<String, Date>>()
+        val dayFmt = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        try {
+            val baseDate = dayFmt.parse(selectedDate) ?: Date()
+            val cal = Calendar.getInstance()
+            for (offset in -3..3) {
+                cal.time = baseDate
+                cal.add(Calendar.DAY_OF_YEAR, offset)
+                list.add(Pair(dayFmt.format(cal.time), cal.time))
+            }
+        } catch (_: Exception) {
+            val cal = Calendar.getInstance()
+            for (offset in -3..3) {
+                cal.time = Date()
+                cal.add(Calendar.DAY_OF_YEAR, offset)
+                list.add(Pair(dayFmt.format(cal.time), cal.time))
+            }
+        }
+        list
     }
 
     Box(
@@ -141,7 +170,7 @@ fun DailyWorkScreen(
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // High-Tech Header & Date Selector
+            // High-Tech Header & Date Carousel
             item {
                 Card(
                     shape = RoundedCornerShape(20.dp),
@@ -155,6 +184,7 @@ fun DailyWorkScreen(
                             .fillMaxWidth()
                             .padding(16.dp)
                     ) {
+                        // Title bar
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -173,74 +203,106 @@ fun DailyWorkScreen(
                                 )
                             }
 
-                            if (!isToday) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                if (!isToday) {
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = CncPrimary.copy(alpha = 0.1f),
+                                        modifier = Modifier.clickable { viewModel.setToday() }
+                                    ) {
+                                        Text(
+                                            text = "Today",
+                                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                            color = CncPrimary,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                        )
+                                    }
+                                }
+
                                 Surface(
-                                    shape = RoundedCornerShape(8.dp),
-                                    color = CncPrimary.copy(alpha = 0.1f),
-                                    modifier = Modifier.clickable { viewModel.setToday() }
+                                    shape = CircleShape,
+                                    color = CncSurfaceVariant,
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .clickable { showDatePicker = true }
+                                        .testTag("open_date_picker_btn")
                                 ) {
-                                    Text(
-                                        text = "Jump to Today",
-                                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                        color = CncPrimary,
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                    )
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            imageVector = Icons.Default.CalendarMonth,
+                                            contentDescription = "Pick Date",
+                                            tint = CncPrimary,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
                                 }
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
 
-                        // Date navigation bar
+                        Text(
+                            text = displayDateFormatted,
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.ExtraBold,
+                                letterSpacing = (-0.2).sp
+                            ),
+                            color = CncTextPrimary
+                        )
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        // Interactive 7-Day Date Carousel
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(CncSurfaceVariant, RoundedCornerShape(14.dp))
-                                .border(1.dp, CncBorder, RoundedCornerShape(14.dp))
-                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                            modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            IconButton(
-                                onClick = { viewModel.setPreviousDay() },
-                                modifier = Modifier.testTag("prev_day_btn")
-                            ) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = "Previous Day",
-                                    tint = CncTextPrimary
-                                )
-                            }
+                            val dayLetterFmt = SimpleDateFormat("EEE", Locale.getDefault())
+                            val dayNumFmt = SimpleDateFormat("d", Locale.getDefault())
 
-                            Row(
-                                modifier = Modifier
-                                    .clickable { showDatePicker = true }
-                                    .padding(horizontal = 8.dp, vertical = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.CalendarToday,
-                                    contentDescription = null,
-                                    tint = CncPrimary,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = if (isToday) "Today ($displayDateFormatted)" else displayDateFormatted,
-                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                                    color = CncTextPrimary
-                                )
-                            }
+                            carouselDays.forEach { (dateStr, dateObj) ->
+                                val isSelected = dateStr == selectedDate
+                                val isCurrentToday = dateStr == todayStr
 
-                            IconButton(
-                                onClick = { viewModel.setNextDay() },
-                                modifier = Modifier.testTag("next_day_btn")
-                            ) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                    contentDescription = "Next Day",
-                                    tint = CncTextPrimary
-                                )
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = if (isSelected) CncPrimary else if (isCurrentToday) CncPrimary.copy(alpha = 0.1f) else CncSurfaceVariant,
+                                    border = androidx.compose.foundation.BorderStroke(
+                                        width = if (isSelected) 1.5.dp else 1.dp,
+                                        color = if (isSelected) CncLaserCyan else CncBorder
+                                    ),
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .padding(horizontal = 2.dp)
+                                        .clickable { viewModel.setSelectedDate(dateStr) }
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(vertical = 8.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text(
+                                            text = dayLetterFmt.format(dateObj).uppercase(Locale.getDefault()),
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                fontSize = 9.sp,
+                                                fontWeight = FontWeight.Bold
+                                            ),
+                                            color = if (isSelected) Color.White.copy(alpha = 0.9f) else CncTextSecondary
+                                        )
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = dayNumFmt.format(dateObj),
+                                            style = MaterialTheme.typography.titleSmall.copy(
+                                                fontWeight = FontWeight.Black,
+                                                fontFamily = FontFamily.Monospace
+                                            ),
+                                            color = if (isSelected) Color.White else CncTextPrimary
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -283,7 +345,7 @@ fun DailyWorkScreen(
                     FuturisticMetricCard(
                         title = "Gross Revenue",
                         value = "$currencySymbol${String.format(Locale.US, "%.0f", totalRevenue)}",
-                        subtitle = "Billed to clients",
+                        subtitle = "Client billing total",
                         icon = Icons.Default.MonetizationOn,
                         accentColor = CncLaserCyan,
                         modifier = Modifier.weight(1f),
@@ -293,7 +355,7 @@ fun DailyWorkScreen(
                     FuturisticMetricCard(
                         title = "Production Cost",
                         value = "$currencySymbol${String.format(Locale.US, "%.0f", totalCost)}",
-                        subtitle = "Material & wear",
+                        subtitle = "Materials & tooling wear",
                         icon = Icons.Default.Schedule,
                         accentColor = CncCost,
                         modifier = Modifier.weight(1f),
@@ -302,7 +364,7 @@ fun DailyWorkScreen(
                 }
             }
 
-            // Category Chips Row
+            // Category Filter Chips
             item {
                 Column {
                     Text(
@@ -352,11 +414,13 @@ fun DailyWorkScreen(
                         color = CncTextPrimary
                     )
 
-                    Text(
-                        text = "Tap item to view specs",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = CncTextSecondary
-                    )
+                    if (dailyDesigns.isNotEmpty()) {
+                        Text(
+                            text = "Tap item to view specs",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = CncTextSecondary
+                        )
+                    }
                 }
             }
 
@@ -374,29 +438,46 @@ fun DailyWorkScreen(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(32.dp),
+                                .padding(28.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
                         ) {
-                            CncImageThumbnail(
-                                imageUri = "preset:door",
-                                modifier = Modifier.size(90.dp)
-                            )
+                            Surface(
+                                shape = CircleShape,
+                                color = CncPrimary.copy(alpha = 0.08f),
+                                modifier = Modifier.size(72.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.PrecisionManufacturing,
+                                        contentDescription = null,
+                                        tint = CncPrimary,
+                                        modifier = Modifier.size(36.dp)
+                                    )
+                                }
+                            }
+
                             Spacer(modifier = Modifier.height(16.dp))
+
                             Text(
-                                text = "No Designs Logged For This Date",
+                                text = "No Designs Logged for $selectedDate",
                                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                color = CncTextPrimary
+                                color = CncTextPrimary,
+                                textAlign = TextAlign.Center
                             )
+
                             Spacer(modifier = Modifier.height(4.dp))
+
                             Text(
-                                text = "Finished creating a door, jali screen, or 3D carving? Tap below to calculate profit and add it to your daily log.",
+                                text = "Finished creating a CNC door, jali screen, or 3D carving? Tap below to log design specifications, cost, and income.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = CncTextSecondary,
-                                modifier = Modifier.padding(horizontal = 12.dp),
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(horizontal = 8.dp)
                             )
+
                             Spacer(modifier = Modifier.height(18.dp))
+
                             Button(
                                 onClick = onAddNewDesign,
                                 shape = RoundedCornerShape(12.dp),
@@ -411,7 +492,6 @@ fun DailyWorkScreen(
                     }
                 }
             } else {
-                // Design Cards List
                 items(dailyDesigns, key = { it.id }) { design ->
                     CncDesignCard(
                         design = design,
@@ -532,6 +612,7 @@ fun DailyWorkScreen(
                 ) {
                     CncImageThumbnail(
                         imageUri = detail.imageUri,
+                        category = detail.category,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(160.dp)
@@ -629,9 +710,10 @@ fun CncDesignCard(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Design Preview Image
+                // Design Preview Image / Schematic
                 CncImageThumbnail(
                     imageUri = design.imageUri,
+                    category = design.category,
                     modifier = Modifier.size(72.dp)
                 )
 

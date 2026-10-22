@@ -583,6 +583,7 @@ fun AnalyticsScreen(
 
                                 CncImageThumbnail(
                                     imageUri = design.imageUri,
+                                    category = design.category,
                                     modifier = Modifier.size(36.dp)
                                 )
 

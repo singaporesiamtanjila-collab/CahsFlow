@@ -42,7 +42,11 @@ class CncViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         viewModelScope.launch {
-            repository.seedInitialDataIfEmpty()
+            val list = repository.getAllDesignsList()
+            val hasMock = list.any { it.title.contains("Royal Baroque") || it.title.contains("Moroccan Jali") || it.title.contains("Parametric 3D Wave") }
+            if (hasMock && list.all { it.imageUri?.startsWith("preset:") == true }) {
+                repository.clearAll()
+            }
         }
     }
 
@@ -152,10 +156,9 @@ class CncViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun resetDemoData() {
+    fun clearAllData() {
         viewModelScope.launch {
             repository.clearAll()
-            repository.seedInitialDataIfEmpty()
         }
     }
 }

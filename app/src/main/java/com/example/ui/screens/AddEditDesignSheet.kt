@@ -29,11 +29,10 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddPhotoAlternate
-import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.PrecisionManufacturing
-import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -45,14 +44,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.SheetState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -60,25 +58,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.example.R
 import com.example.data.CncDesignEntity
 import com.example.ui.components.CncImageThumbnail
 import com.example.ui.theme.CncBorder
 import com.example.ui.theme.CncBorderBright
 import com.example.ui.theme.CncCost
-import com.example.ui.theme.CncCostLight
-import com.example.ui.theme.CncLaserCyan
 import com.example.ui.theme.CncPrimary
 import com.example.ui.theme.CncProfit
 import com.example.ui.theme.CncProfitLight
@@ -86,8 +79,6 @@ import com.example.ui.theme.CncSurface
 import com.example.ui.theme.CncSurfaceVariant
 import com.example.ui.theme.CncTextPrimary
 import com.example.ui.theme.CncTextSecondary
-import java.text.SimpleDateFormat
-import java.util.Date
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -103,15 +94,15 @@ fun AddEditDesignSheet(
 
     var title by remember { mutableStateOf(initialDesign?.title ?: "") }
     var category by remember { mutableStateOf(initialDesign?.category ?: "Door") }
-    var priceText by remember { mutableStateOf(initialDesign?.sellingPrice?.toString()?.replace(".0", "") ?: "") }
-    var costText by remember { mutableStateOf(initialDesign?.productionCost?.toString()?.replace(".0", "") ?: "") }
-    var imageUri by remember { mutableStateOf(initialDesign?.imageUri ?: "preset:door") }
+    var priceText by remember { mutableStateOf(initialDesign?.sellingPrice?.takeIf { it > 0 }?.toString()?.replace(".0", "") ?: "") }
+    var costText by remember { mutableStateOf(initialDesign?.productionCost?.takeIf { it > 0 }?.toString()?.replace(".0", "") ?: "") }
+    var imageUri by remember { mutableStateOf<String?>(initialDesign?.imageUri?.takeIf { !it.startsWith("preset:") }) }
 
     var machineTimeText by remember { mutableStateOf(initialDesign?.machineTimeMinutes?.takeIf { it > 0 }?.toString() ?: "") }
-    var bitType by remember { mutableStateOf(initialDesign?.bitType ?: "Ball Nose 6mm") }
-    var material by remember { mutableStateOf(initialDesign?.material ?: "Solid Wood") }
+    var bitType by remember { mutableStateOf(initialDesign?.bitType ?: "") }
+    var material by remember { mutableStateOf(initialDesign?.material ?: "") }
     var clientName by remember { mutableStateOf(initialDesign?.clientName ?: "") }
-    var dimensions by remember { mutableStateOf(initialDesign?.dimensions ?: "7ft x 3.5ft") }
+    var dimensions by remember { mutableStateOf(initialDesign?.dimensions ?: "") }
     var notes by remember { mutableStateOf(initialDesign?.notes ?: "") }
 
     var showAdvanced by remember { mutableStateOf(initialDesign != null) }
@@ -169,7 +160,7 @@ fun AddEditDesignSheet(
                         color = CncTextPrimary
                     )
                     Text(
-                        text = "Log design specifications, cost and earnings",
+                        text = "Log finished design, costs and client earnings",
                         style = MaterialTheme.typography.bodySmall,
                         color = CncTextSecondary
                     )
@@ -245,6 +236,7 @@ fun AddEditDesignSheet(
                 value = title,
                 onValueChange = { title = it },
                 label = { Text("Design Title (e.g. Royal Double Door 3D)") },
+                placeholder = { Text("Enter door or panel design name") },
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("input_design_title"),
@@ -330,99 +322,112 @@ fun AddEditDesignSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Image Selection
+            // Real Photo Upload Section
             Text(
-                text = "DESIGN IMAGE & PREVIEW",
+                text = "DESIGN PHOTO (OPTIONAL)",
                 style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                 color = CncTextSecondary
             )
             Spacer(modifier = Modifier.height(8.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                CncImageThumbnail(
-                    imageUri = imageUri,
-                    modifier = Modifier.size(76.dp)
-                )
+            if (!imageUri.isNullOrBlank()) {
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = CncSurfaceVariant,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, CncBorderBright),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        AsyncImage(
+                            model = imageUri,
+                            contentDescription = "Selected Photo",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(68.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                        )
 
-                Column(modifier = Modifier.weight(1f)) {
-                    Button(
-                        onClick = {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Photo Attached",
+                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                color = CncTextPrimary
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(
+                                    text = "Change",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = CncPrimary
+                                    ),
+                                    modifier = Modifier.clickable {
+                                        photoPickerLauncher.launch(
+                                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                        )
+                                    }
+                                )
+                                Text(
+                                    text = "•",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = CncTextSecondary
+                                )
+                                Text(
+                                    text = "Remove",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.error
+                                    ),
+                                    modifier = Modifier.clickable { imageUri = null }
+                                )
+                            }
+                        }
+                    }
+                }
+            } else {
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = CncSurfaceVariant,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, CncBorder),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
                             photoPickerLauncher.launch(
                                 PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                             )
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = CncSurfaceVariant),
-                        shape = RoundedCornerShape(12.dp),
+                        }
+                        .testTag("pick_image_button")
+                ) {
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .testTag("pick_image_button")
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
                             imageVector = Icons.Default.AddPhotoAlternate,
                             contentDescription = null,
                             tint = CncPrimary,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(24.dp)
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "Upload Design Photo",
-                            color = CncPrimary,
-                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = if (imageUri == "preset:door") CncBorderBright else CncSurfaceVariant,
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable { imageUri = "preset:door" }
-                        ) {
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column {
                             Text(
-                                text = "Door",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = CncTextPrimary,
-                                modifier = Modifier.padding(vertical = 4.dp, horizontal = 6.dp)
+                                text = "Attach Real Photo of Finished Work",
+                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                color = CncPrimary
                             )
-                        }
-
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = if (imageUri == "preset:panel") CncBorderBright else CncSurfaceVariant,
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable { imageUri = "preset:panel" }
-                        ) {
                             Text(
-                                text = "Jali",
+                                text = "Pick from gallery or take a picture",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = CncTextPrimary,
-                                modifier = Modifier.padding(vertical = 4.dp, horizontal = 6.dp)
-                            )
-                        }
-
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = if (imageUri == "preset:banner") CncBorderBright else CncSurfaceVariant,
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable { imageUri = "preset:banner" }
-                        ) {
-                            Text(
-                                text = "CAD",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = CncTextPrimary,
-                                modifier = Modifier.padding(vertical = 4.dp, horizontal = 6.dp)
+                                color = CncTextSecondary
                             )
                         }
                     }
@@ -458,7 +463,8 @@ fun AddEditDesignSheet(
                         OutlinedTextField(
                             value = dimensions,
                             onValueChange = { dimensions = it },
-                            label = { Text("Dimensions (e.g. 7x3.5ft)") },
+                            label = { Text("Dimensions") },
+                            placeholder = { Text("7ft x 3.5ft") },
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(14.dp),
                             singleLine = true
@@ -467,7 +473,8 @@ fun AddEditDesignSheet(
                         OutlinedTextField(
                             value = material,
                             onValueChange = { material = it },
-                            label = { Text("Material (Teak, MDF, HPL)") },
+                            label = { Text("Material") },
+                            placeholder = { Text("Teak, MDF, HPL") },
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(14.dp),
                             singleLine = true
@@ -494,7 +501,8 @@ fun AddEditDesignSheet(
                         OutlinedTextField(
                             value = bitType,
                             onValueChange = { bitType = it },
-                            label = { Text("Bit (Ball Nose, V-Bit)") },
+                            label = { Text("Tooling Bit") },
+                            placeholder = { Text("Ball Nose 6mm") },
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(14.dp),
                             singleLine = true
@@ -507,6 +515,7 @@ fun AddEditDesignSheet(
                         value = clientName,
                         onValueChange = { clientName = it },
                         label = { Text("Client Name / Project Reference") },
+                        placeholder = { Text("Customer or site name") },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(14.dp),
                         singleLine = true
@@ -518,6 +527,7 @@ fun AddEditDesignSheet(
                         value = notes,
                         onValueChange = { notes = it },
                         label = { Text("Technical Notes / G-Code Program Info") },
+                        placeholder = { Text("Spindle RPM, feed rate, bit notes...") },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(14.dp),
                         maxLines = 3
@@ -530,7 +540,7 @@ fun AddEditDesignSheet(
             // Save Action Button
             Button(
                 onClick = {
-                    val finalTitle = title.trim().ifEmpty { "$category Design" }
+                    val finalTitle = title.trim().ifEmpty { "$category Work" }
                     val minutes = machineTimeText.toIntOrNull() ?: 0
                     val entity = (initialDesign ?: CncDesignEntity(
                         dateString = defaultDate,

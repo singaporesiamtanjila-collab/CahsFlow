@@ -515,7 +515,7 @@ fun SettingsScreen(
                 }
             }
 
-            // Reset / Demo Presets
+            // Purge / Clear All Data
             item {
                 Card(
                     shape = RoundedCornerShape(20.dp),
@@ -530,16 +530,16 @@ fun SettingsScreen(
                             .padding(16.dp)
                     ) {
                         Text(
-                            text = "DEMO DATA & DIAGNOSTICS",
+                            text = "DATA PURGE & RESET",
                             style = MaterialTheme.typography.labelSmall.copy(
                                 fontWeight = FontWeight.Black,
                                 letterSpacing = 1.sp
                             ),
-                            color = CncTextPrimary
+                            color = MaterialTheme.colorScheme.error
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Reload sample CNC door and jali designs to explore analytics and charts.",
+                            text = "Permanently remove all logged CNC designs and reset your local database to empty state.",
                             style = MaterialTheme.typography.bodySmall,
                             color = CncTextSecondary
                         )
@@ -547,11 +547,14 @@ fun SettingsScreen(
                         OutlinedButton(
                             onClick = { showSeedConfirmDialog = true },
                             shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth()
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f)),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("clear_all_data_btn")
                         ) {
-                            Icon(imageVector = Icons.Default.RestartAlt, contentDescription = null)
+                            Icon(imageVector = Icons.Default.RestartAlt, contentDescription = null, tint = MaterialTheme.colorScheme.error)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Reset to CNC Sample Data")
+                            Text("Clear All Local Records", color = MaterialTheme.colorScheme.error)
                         }
                     }
                 }
@@ -610,21 +613,22 @@ fun SettingsScreen(
         )
     }
 
-    // Reset Confirm Dialog
+    // Clear Confirm Dialog
     if (showSeedConfirmDialog) {
         AlertDialog(
             onDismissRequest = { showSeedConfirmDialog = false },
-            title = { Text("Reset to Sample Data?") },
-            text = { Text("This will reload sample CNC door, jali screen, and wall panel projects.") },
+            title = { Text("Delete All Local Records?") },
+            text = { Text("This will permanently remove all CNC designs from your device storage. Make sure to export a JSON backup first if needed.") },
             confirmButton = {
                 Button(
                     onClick = {
-                        viewModel.resetDemoData()
+                        viewModel.clearAllData()
                         showSeedConfirmDialog = false
-                        Toast.makeText(context, "Sample data reloaded!", Toast.LENGTH_SHORT).show()
-                    }
+                        Toast.makeText(context, "All local records cleared.", Toast.LENGTH_SHORT).show()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) {
-                    Text("Reload")
+                    Text("Delete All")
                 }
             },
             dismissButton = {

@@ -5,6 +5,7 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -27,8 +28,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Architecture
 import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Chair
+import androidx.compose.material.icons.filled.DoorFront
 import androidx.compose.material.icons.filled.Fingerprint
+import androidx.compose.material.icons.filled.GridOn
+import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material.icons.filled.PrecisionManufacturing
+import androidx.compose.material.icons.filled.SquareFoot
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -370,67 +378,63 @@ fun BiometricRadarScanner(
 @Composable
 fun CncImageThumbnail(
     imageUri: String?,
+    category: String = "Door",
     modifier: Modifier = Modifier
 ) {
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(Color(0xFFF1F5F9))
-            .border(1.dp, CncBorder, RoundedCornerShape(12.dp)),
+            .clip(RoundedCornerShape(14.dp))
+            .background(Color(0xFFF8FAFC))
+            .border(1.dp, CncBorderBright, RoundedCornerShape(14.dp)),
         contentAlignment = Alignment.Center
     ) {
-        when {
-            imageUri == "preset:door" -> {
-                Image(
-                    painter = painterResource(id = R.drawable.cnc_door_sample),
-                    contentDescription = "Door Design",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
+        if (!imageUri.isNullOrBlank() && !imageUri.startsWith("preset:")) {
+            AsyncImage(
+                model = imageUri,
+                contentDescription = "CNC Design Photo",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            // Elegant category schematic fallback
+            val (icon, label) = when {
+                category.contains("Door", ignoreCase = true) -> Pair(Icons.Default.DoorFront, "DOOR")
+                category.contains("Jali", ignoreCase = true) || category.contains("Grill", ignoreCase = true) -> Pair(Icons.Default.GridOn, "JALI")
+                category.contains("Panel", ignoreCase = true) -> Pair(Icons.Default.Layers, "PANEL")
+                category.contains("Relief", ignoreCase = true) || category.contains("3D", ignoreCase = true) -> Pair(Icons.Default.Architecture, "3D CNC")
+                category.contains("Furniture", ignoreCase = true) || category.contains("Cabinet", ignoreCase = true) -> Pair(Icons.Default.Chair, "WOOD")
+                else -> Pair(Icons.Default.PrecisionManufacturing, "CNC")
             }
-            imageUri == "preset:panel" -> {
-                Image(
-                    painter = painterResource(id = R.drawable.cnc_panel_sample),
-                    contentDescription = "Panel Design",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
-            imageUri == "preset:banner" -> {
-                Image(
-                    painter = painterResource(id = R.drawable.cnc_hero_banner),
-                    contentDescription = "CAD Blueprint",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
-            !imageUri.isNullOrBlank() -> {
-                AsyncImage(
-                    model = imageUri,
-                    contentDescription = "CNC Design Photo",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
-            else -> {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
+
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+                modifier = Modifier.padding(6.dp)
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = CncPrimary.copy(alpha = 0.08f),
+                    modifier = Modifier.size(32.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Build,
-                        contentDescription = null,
-                        tint = CncTextSecondary.copy(alpha = 0.6f),
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = "CNC",
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                        color = CncTextSecondary.copy(alpha = 0.7f),
-                        fontSize = 9.sp
-                    )
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = CncPrimary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
+                Spacer(modifier = Modifier.height(3.dp))
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 0.8.sp
+                    ),
+                    color = CncTextSecondary,
+                    fontSize = 8.5.sp
+                )
             }
         }
     }
